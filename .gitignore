@@ -1,0 +1,21 @@
+# Arquivos Python
+*.pyc
+__pycache__/
+
+# Ambiente virtual (caso esteja na pasta do projeto)
+venv/
+env/
+
+# Banco de dados
+db.sqlite3
+
+# Dados locais
+csv_data/
+
+# Configs do VSCode
+.vscode/
+
+# Arquivos temporários
+*.log
+*.swp
+.DS_Store
