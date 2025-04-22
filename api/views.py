@@ -11,34 +11,50 @@ from django.conf import settings
 
 from api.utils.transformers import AssuntosPipeline, CategoricalPipeline, MultiLabelBinarizerWrapper, StringToListTransformer
 
+from rules.models import RegraClassificacao
+from rules.utils import verifica_regra
+
 # Caminho do modelo salvo
 MODEL_PATH = os.path.join(settings.BASE_DIR, 'api', 'models_clf', 'stacking_clf_V2.pkl')
 MODEL = joblib.load(MODEL_PATH)
 
 class PredictSetorDestinoView(APIView):
     def post(self, request):
+        message = {
+            'regra': None,
+            'demanda': None,
+            'setor_destino': None
+        }
+
         data = request.data
 
-        # Verifica se é uma lista (múltiplas entradas)
-        is_many = isinstance(data, list)
-
-        serializer = TextoJuridicoSerializer(data=data, many=is_many)
+        serializer = TextoJuridicoSerializer(data=data)
         if serializer.is_valid():
             input_data = serializer.validated_data
 
-            # Se for único, criamos uma lista com 1 elemento
-            if not is_many:
-                input_data = [input_data]
+            # Verifica as regras cadastradas.
+            regras = RegraClassificacao.objects.filter(ativo=True).order_by('-prioridade').prefetch_related(
+                'grupos__condicoes',
+                'grupos__subgrupos__condicoes'
+            )
+
+            for regra in regras:
+                if verifica_regra(regra, input_data):
+                    message['regra'] = regra.nome
+                    message['demanda'] = regra.demanda
+                    message['setor_destino'] = regra.setor_destino
+
+                    return Response(message, status=status.HTTP_200_OK)
 
             # Cria o DataFrame para alimenta o pipeline
-            df = pd.DataFrame(input_data)
-            print(df)
+            #print(input_data)
+            df = pd.DataFrame(input_data, index=[0])
+            #print(df)
             prediction = MODEL.predict(df)
-            print(prediction)
+            #print(prediction)
 
-            return Response({
-                'results': [
-                    {'setor_destino': p} for p in prediction
-                ]
-            }, status=status.HTTP_200_OK)
+            message['regra'] = 'Classificado por modelo de IA'
+            message['setor_destino'] = prediction[0]
+
+            return Response(message, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

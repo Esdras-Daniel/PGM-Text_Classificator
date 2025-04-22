@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+
+{% block  title %}Validação do Cartório{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Validação de Peça Jurídica</h1>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-success" role="alert">{{ message }}</div>
+    {% endfor %}
+{% endif %}
+
+<div class="mb-3">
+    <label class="form-label"><strong>Texto</strong></label>
+    <div class="form-control" style="height: 300px; overflow-y: auto; background-color: #f8f9fa;">
+        {{ texto.teor_texto }}
+    </div>
+</div>
+
+<ul class="list-group mb-4">
+    <li class="list-group-item"><strong>Assuntos</strong> {{ texto.assuntos }}</li>
+    <li class="list-group-item"><strong>Classe do Processo</strong> {{ texto.classe_processo }}</li>
+    <li class="list-group-item"><strong>Orgão Julgador</strong> {{ texto.orgao_julgador }}</li>
+    <li class="list-group-item"><strong>Setor Destino Previsto</strong> {{ setor_previsto }}</li>
+    <li class="list-group-item"><strong>Setor Destino Real</strong> {{ texto.setor_destino }}</li>
+</ul>
+
+<form method="post" id='form-validacao' class="card card-body">
+    {% csrf_token %}
+    <input type="hidden" name="texto_id" value="{{ texto.id }}">
+    <div class="mb-3">
+        <label for="{{ form.setor_destino_validated.id_for_label }}" class="form-label">Setor Destino Corrigido (se for rejeitado):</label>
+        {{ form.setor_destino_validated|add_class:"form-control"}}
+    </div>
+
+    <div class="mb-3">
+        <label for="{{ form.demanda.id_for_label }}" class="form-label">Demanda (opcional)</label>
+        {{ form.demanda|add_class:"form-control" }}
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" name="acao" value="aceitar" class="btn btn-success">Aceitar</button>
+        <button type="submit" name="acao" value="rejeitar" class="btn btn-danger" id="btn-rejeitar">Rejeitar</button>
+    </div>
+</form>
+
+<!-- Modal de erro -->
+<div class="modal fade" id="erroModal" tabindex="-1" aria-labelledby="erroModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-danger">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="erroModalLabel">Erro na Rejeição</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                Por favor, selecione um setor corrigido válido antes de rejeitar a classificação.
+            </div>
+            <div class=modal-footer>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Entendi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const form = document.getElementById('form-validacao');
+    const btnRejeitar = document.getElementById('btn-rejeitar');
+
+    btnRejeitar.addEventListener("click", (event) => {
+        const select = document.querySelector("select[name='setor_destino_validated']");
+        const valor = select.value;
+
+        if (!valor) {
+            event.preventDefault(); // Impede o envio do formulário
+            const erroModal = new bootstrap.Modal(document.getElementById('erroModal'));
+            erroModal.show();
+        }
+    });
+});
+</script>
+
+{% endblock %}
