@@ -1,7 +1,9 @@
 from django.db import models
+from django.core.exceptions import ValidationError
 
 class RegraClassificacao(models.Model):
     nome = models.CharField(max_length=255)
+    expressao = models.JSONField()
     descricao = models.TextField(blank=True, null=True)
     demanda = models.TextField(blank=True, null=True)
     prioridade = models.IntegerField(default=0) # Mudar para Choices
@@ -11,7 +13,7 @@ class RegraClassificacao(models.Model):
     def __str__(self):
         return self.nome
     
-class GrupoCondicao(models.Model):
+"""class GrupoCondicao(models.Model):
     OPERADORES = [('AND', 'AND'), ('OR', 'OR')]
 
     regra = models.ForeignKey(
@@ -60,4 +62,4 @@ class Condicao(models.Model):
     valor = models.TextField()
 
     def __str__(self):
-        return f'{self.campo} - {self.operador} - {self.valor}'
+        return f'{self.campo} - {self.operador} - {self.valor}'"""

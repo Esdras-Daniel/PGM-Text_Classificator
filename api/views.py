@@ -12,7 +12,7 @@ from django.conf import settings
 from api.utils.transformers import AssuntosPipeline, CategoricalPipeline, MultiLabelBinarizerWrapper, StringToListTransformer
 
 from rules.models import RegraClassificacao
-from rules.utils import verifica_regra
+from rules.utils import avaliar_expressao
 
 # Caminho do modelo salvo
 MODEL_PATH = os.path.join(settings.BASE_DIR, 'api', 'models_clf', 'stacking_clf_V2.pkl')
@@ -33,18 +33,24 @@ class PredictSetorDestinoView(APIView):
             input_data = serializer.validated_data
 
             # Verifica as regras cadastradas.
-            regras = RegraClassificacao.objects.filter(ativo=True).order_by('-prioridade').prefetch_related(
-                'grupos__condicoes',
-                'grupos__subgrupos__condicoes'
-            )
+            regras = RegraClassificacao.objects.filter(ativo=True).order_by('-prioridade')
 
             for regra in regras:
-                if verifica_regra(regra, input_data):
+                try:
+                    if avaliar_expressao(regra.expressao, input_data):
+                        message['regra'] = regra.nome
+                        message['demanda'] = regra.demanda
+                        message['setor_destino'] = regra.setor_destino
+
+                        return Response(message, status=status.HTTP_200_OK)
+                except Exception as e:
+                    return Response(e, status=status.HTTP_400_BAD_REQUEST)
+                
+                '''if verifica_regra(regra, input_data):
                     message['regra'] = regra.nome
                     message['demanda'] = regra.demanda
                     message['setor_destino'] = regra.setor_destino
-
-                    return Response(message, status=status.HTTP_200_OK)
+                    return Response(message, status=status.HTTP_200_OK)'''
 
             # Cria o DataFrame para alimenta o pipeline
             #print(input_data)

@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">Criar Nova Regra</h2>
+    <form method="post" id="regra-form" class="needs-validation">
+        {% csrf_token %}
+
+        {% for field in form %}
+            {% if field.name != 'expressao' %}
+                <div class="mb-3">
+                    <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                    {{ field|add_class:"form-control" }}
+                    {% if field.help_text %}
+                        <div class="form-text">{{ field.help_text }}</div>
+                    {% endif %}
+                    {% if field.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ field.errors|join:", " }}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% endfor %}
+
+        <div class="mb-4">
+            <label class="form-label">Expressão:</label>
+            <div id="expressao-builder"></div>
+            <input type="hidden" name="expressao" id="id_expressao" />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Salvar</button>
+    </form>
+</div>
+
+<script>
+    const CAMPOS = ['teor_texto', 'classe_processo', 'assuntos', 'orgao_julgador'];
+    const OPERADORES = ['equals', 'contains', 'startsWith', 'in'];
+    
+    function novaCondicao() {
+        const div = document.createElement('div');
+        div.className = 'condicao mb-2';
+        div.innerHTML = `
+            <select class="form-select campo me-2">
+                ${CAMPOS.map(c => `<option value="${c}">${c}</option>`).join('')}
+            </select>
+            <select class="form-select operador me-2">
+                ${OPERADORES.map(o => `<option value="${o}">${o}</option>`).join('')}
+            </select>
+            <input type="text" class="form-control valor me-2" placeholder="Valor" />
+            <button type="button" class="btn btn-danger btn-sm" onclick="this.parentNode.remove()">Remover</button>
+        `;
+        return div;
+    }
+    
+    function novoGrupo(profundidade = 0) {
+        const div = document.createElement('div');
+        div.className = 'grupo border rounded p-2 mt-2';
+        div.style.marginLeft = `${profundidade * 20}px`;
+        div.innerHTML = `
+            <div class="d-flex align-items-center mb-2">
+                <label class="me-2">Operador:</label>
+                <select class="form-select operador-grupo me-2">
+                    <option value="AND">E</option>
+                    <option value="OR">Ou</option>
+                </select>
+                <button type="button" class="btn btn-sm btn-success me-2" onclick="addCondicao(this)">Adicionar Condição</button>
+                <button type="button" class="btn btn-sm btn-secondary me-2" onclick="addSubgrupo(this)">Adicionar Subgrupo</button>
+                <button type="button" class="btn btn-sm btn-danger" onclick="this.parentNode.parentNode.remove()">Remover Grupo</button>
+            </div>
+            <div class="condicoes ms-3"></div>
+        `;
+        return div;
+    }
+    
+    function addCondicao(botao) {
+        const grupo = botao.closest('.grupo');
+        grupo.querySelector('.condicoes').appendChild(novaCondicao());
+    }
+    
+    function addSubgrupo(botao) {
+        const grupo = botao.closest('.grupo');
+        grupo.querySelector('.condicoes').appendChild(novoGrupo(1));
+    }
+    
+    function gerarJSON(grupo) {
+        const operador = grupo.querySelector('.operador-grupo').value;
+        const condicoesDiv = grupo.querySelector('.condicoes');
+        const elementos = Array.from(condicoesDiv.children);
+        
+        const condicoes = elementos.map(el => {
+            if (el.classList.contains('condicao')) {
+                return {
+                    campo: el.querySelector('.campo').value,
+                    operador: el.querySelector('.operador').value,
+                    valor: el.querySelector('.valor').value
+                };
+            } else if (el.classList.contains('grupo')) {
+                return gerarJSON(el);
+            }
+        });
+    
+        return {
+            operador,
+            condicoes
+        };
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        //console.log("DOM carregado. Script rodando.");  // ✅ TESTE
+        const builder = document.getElementById('expressao-builder');
+        builder.appendChild(novoGrupo());
+
+        const form = document.getElementById('regra-form');
+        if (!form) {
+            console.error("Formulário com id='regra-form' não encontrado!"); // 🚨
+            return;
+        }
+    
+        form.addEventListener('submit', function (e) {
+            //e.preventDefault();  // Impede o envio automático
+            //console.log('Submetendo formulário...');
+            const raiz = builder.querySelector('.grupo');
+            const jsonFinal = gerarJSON(raiz);
+
+            //console.log("JSON final antes de submeter:", jsonFinal);  // ✅ TESTE
+            document.getElementById('id_expressao').value = JSON.stringify(jsonFinal);
+            //console.log('Campo expressao preenchido com:', document.getElementById('id_expressao').value);
+        });
+    });
+    </script>
+    
+{% endblock %}

@@ -22,16 +22,21 @@ or call:\n
 
 # Função para inicializar o Django dentro de um ambiente externo
 def init_django(project_name=None):
-    # Garante que o diretório atual seja o mesmo onde o projeto está localizado
-    os.chdir(PWD)
     # Tenta obter o nome do projeto
     project_name = project_name or os.environ.get('DJANGO_PROJECT') or None
 
     if project_name == None:
         raise Exception(PROJ_MISSING_MSG)
     
+    # Obter o dirtório absoluto do script django_for_jupyter.py
+    current_script_dir = os.path.dirname(os.path.abspath(__file__))
+
+    # Navegar para o diretório raiz do projeto Django
+    project_root = os.path.abspath(os.path.join(current_script_dir, os.pardir))
+    
     # Adiciona o diretório do projeto ao inicio do sys.path para que os módulos sejam encontrados
-    sys.path.insert(0, os.getenv('PWD'))
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
 
     # Define a variável de ambiente que aponta para o módulo de configurações do projeto
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', f'{project_name}.settings')
@@ -42,3 +47,6 @@ def init_django(project_name=None):
     # Inicializa o Django
     import django
     django.setup()
+
+    print(f"Django initialized for project: {project_name}")
+    print(f"Project root added to sys.path: {project_root}")

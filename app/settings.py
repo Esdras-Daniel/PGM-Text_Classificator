@@ -40,6 +40,7 @@ INSTALLED_APPS = [
 
     'rest_framework',
     'widget_tweaks',
+    'django_json_widget',
     'api',
     'rules',
     'cartorio',
